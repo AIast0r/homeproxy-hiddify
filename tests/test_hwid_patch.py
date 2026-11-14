@@ -38,6 +38,17 @@ class SubscriptionHWIDTests(unittest.TestCase):
         self.assertIn("const rawRes = fetch_subscription(rawUrl, user_agent)", SCRIPT)
         self.assertEqual(SCRIPT.count("wGET("), 2)  # comment and compatibility path
 
+    def test_netshift_identity_generator_profiles(self):
+        for app in ("Happ", "INCY"):
+            self.assertIn(app + ": {", VIEW)
+        for platform in ("Android:", "AndroidTV:", "iOS:", "macOS:", "Windows:", "'Mac OS X':", "'Windows 11':", "'Windows 10':"):
+            self.assertIn(platform, VIEW)
+        self.assertIn("function hpPickWeighted", VIEW)
+        self.assertIn("function hpGenerateClient", VIEW)
+        self.assertIn("widget.setValue(identity[key])", VIEW)
+        self.assertIn("hpChars(HP_HEX, 16)", VIEW)
+        self.assertIn("hpChars(HP_HEX, 32).toUpperCase()", VIEW)
+
     def test_ui_and_package_dependencies(self):
         for option in ("send_hwid", "hwid", "device_os", "device_os_version", "device_model"):
             self.assertIn("'" + option + "'", VIEW)
