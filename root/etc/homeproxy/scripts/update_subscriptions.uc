@@ -93,7 +93,7 @@ function shellquote(value) {
 
 function valid_header_value(value) {
 	return type(value) === 'string' && length(value) <= 200 &&
-	       !match(value, /[\\r\\n\\x00-\\x1f\\x7f]/);
+	       !match(value, /[\r\n\x00-\x1f\x7f]/);
 }
 
 function subscription_hwid() {
