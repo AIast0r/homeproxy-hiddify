@@ -24,7 +24,7 @@ PKG_NAME="$(get_mk_value "PKG_NAME")"
 if [ "$RELEASE_TYPE" == "release" ]; then
 	PKG_VERSION="$(get_mk_value "PKG_VERSION")"
 else
-	PKG_VERSION="$(date -u +%Y.%m.%d)-r$(git rev-list --count HEAD)-g$(git rev-parse --short=8 HEAD)"
+	PKG_VERSION="$(date -u +%Y.%m.%d).${GITHUB_RUN_NUMBER:-0}-r1"
 fi
 
 TEMP_DIR="$(mktemp -d -p $BASE_DIR)"
