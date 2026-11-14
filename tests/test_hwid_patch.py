@@ -26,6 +26,7 @@ class SubscriptionHWIDTests(unittest.TestCase):
         for header in ("X-HWID", "X-Device-OS", "X-Ver-OS", "X-Device-Model"):
             self.assertIn(header, SCRIPT)
         self.assertIn("--max-redirs 0", SCRIPT)
+        self.assertIn("Invalid subscription device header", SCRIPT)
         self.assertIn("HWID subscription must use HTTPS", SCRIPT)
         self.assertIn("Invalid subscription device header", SCRIPT)
         self.assertIn("shellquote(url)", SCRIPT)
