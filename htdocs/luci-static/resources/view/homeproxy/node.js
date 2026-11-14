@@ -2411,9 +2411,13 @@ return view.extend({
 		o.inputstyle = 'apply';
 		o.inputtitle = _('Generate client identity');
 		o.depends('send_hwid', '1');
-		o.onclick = function(section_id) {
-			const app = this.map.lookupOption('_client_app', section_id)[0].formvalue(section_id) || 'Happ';
-			const platform = this.map.lookupOption('_client_platform', section_id)[0].formvalue(section_id) || 'Android';
+		o.onclick = function(ev, section_id) {
+			/* LuCI Button onclick receives (event, section_id), not just section_id.
+			 * Passing the event object to lookupOption() made the button fail. */
+			const appField = this.map.lookupOption('_client_app', section_id)[0];
+			const platformField = this.map.lookupOption('_client_platform', section_id)[0];
+			const app = (appField && appField.formvalue(section_id)) || 'Happ';
+			const platform = (platformField && platformField.formvalue(section_id)) || 'Android';
 			const identity = hpGenerateClient(app, platform);
 			if (!identity) {
 				ui.addNotification(null, E('p', _('This app / platform combination is not supported.')));
@@ -2421,8 +2425,17 @@ return view.extend({
 			}
 			for (const key of ['user_agent', 'hwid', 'device_os', 'device_os_version', 'device_model']) {
 				const field = this.map.lookupOption(key, section_id)[0];
-				const widget = field && field.getUIElement(section_id);
-				if (widget) widget.setValue(identity[key]);
+				if (!field) continue;
+				const widget = field.getUIElement(section_id);
+				if (widget)
+					widget.setValue(identity[key]);
+				else {
+					const element = this.map.findElement('id', 'cbid.homeproxy.' + section_id + '.' + key);
+					if (element) {
+						element.value = identity[key];
+						element.dispatchEvent(new Event('change', { bubbles: true }));
+					}
+				}
 			}
 			ui.addNotification(null, E('p', _('New client generated. Save and apply to keep this identity.')));
 		};
