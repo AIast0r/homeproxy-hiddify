@@ -105,7 +105,7 @@ jobs:
           from pathlib import Path
           import re
           src = Path('root/etc/homeproxy/scripts/update_subscriptions.uc').read_text()
-          stripped, count = re.subn(r'(?m)^import\\s+[\\s\\S]*?;\\n', '', src)
+          stripped, count = re.subn(r'(?m)^import\s+[\s\S]*?;\n', '', src)
           assert count == 7, f'Expected seven module imports, got {count}'
           Path('/tmp/homeproxy-subscription-syntax.uc').write_text(stripped)
           PY
