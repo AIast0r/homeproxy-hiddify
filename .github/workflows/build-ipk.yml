@@ -41,6 +41,9 @@ jobs:
       - name: Checkout source tree
         uses: actions/checkout@v6
 
+      - name: HWID patch regression checks
+        run: python3 -m unittest discover -s tests -p 'test_*.py' -v
+
       - name: Checkout apk
         uses: actions/checkout@v6
         with:
