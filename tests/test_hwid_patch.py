@@ -45,6 +45,7 @@ class SubscriptionHWIDTests(unittest.TestCase):
             self.assertIn(platform, VIEW)
         self.assertIn("function hpPickWeighted", VIEW)
         self.assertIn("function hpGenerateClient", VIEW)
+        self.assertIn("o.onclick = function(ev, section_id)", VIEW)
         self.assertIn("widget.setValue(identity[key])", VIEW)
         self.assertIn("hpChars(HP_HEX, 16)", VIEW)
         self.assertIn("hpChars(HP_HEX, 32).toUpperCase()", VIEW)
