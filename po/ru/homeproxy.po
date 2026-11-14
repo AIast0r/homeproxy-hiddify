@@ -4420,3 +4420,30 @@ msgstr "DNS ещё не готов — подождите несколько с�
 #: htdocs/luci-static/resources/view/homeproxy/node.js:2907
 msgid "Resolving test hosts…"
 msgstr "Определяю адреса тестовых узлов…"
+
+msgid "Send HWID"
+msgstr "Отправлять HWID"
+
+msgid "Send a persistent anonymous device identifier and optional device headers when fetching subscriptions. Only HTTPS URLs are accepted. Redirects are not followed."
+msgstr "Отправлять постоянный анонимный идентификатор устройства и дополнительные заголовки при загрузке подписок. Допускается только HTTPS, перенаправления не выполняются."
+
+msgid "Subscription HWID"
+msgstr "HWID подписки"
+
+msgid "Optional. Leave empty to generate and save a random permanent ID on the first update. Reuse an existing app HWID if the provider limits device slots."
+msgstr "Необязательно. Если оставить пустым, при первом обновлении создаётся и сохраняется случайный постоянный ID. При ограничении количества устройств можно использовать HWID существующего приложения."
+
+msgid "Automatic (random persistent ID)"
+msgstr "Автоматически (случайный постоянный ID)"
+
+msgid "Use 8–128 letters, digits or . _ : -"
+msgstr "Используйте от 8 до 128 букв латиницы, цифр или символов . _ : -"
+
+msgid "Device OS header"
+msgstr "Заголовок: ОС устройства"
+
+msgid "Device OS version header"
+msgstr "Заголовок: версия ОС"
+
+msgid "Device model header"
+msgstr "Заголовок: модель устройства"
