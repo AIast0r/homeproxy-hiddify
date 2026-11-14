@@ -136,7 +136,8 @@ function fetch_subscription(url, agent) {
 	if (device_os_version) headers['X-Ver-OS'] = device_os_version;
 	if (device_model) headers['X-Device-Model'] = device_model;
 
-	let args = 'curl --fail --silent --show-error --connect-timeout 10 --max-time 45 --max-redirs 0';
+	let args = "curl --fail --silent --show-error --connect-timeout 10 --max-time 45 --max-redirs 0 --write-out " +
+		shellquote('\\n__HP_HTTP_STATUS__:%{http_code}');
 	for (let k in headers) {
 		if (!valid_header_value(headers[k])) {
 			log('Invalid subscription device header; refusing request.');
@@ -152,9 +153,24 @@ function fetch_subscription(url, agent) {
 	args += ' --user-agent ' + shellquote(ua) + ' -- ' + shellquote(url);
 	const fd = popen(args + ' 2>/dev/null');
 	if (!fd) return null;
-	const result = fd.read('all');
+	const result = fd.read('all') || '';
 	fd.close();
-	return result || null;
+	const status = match(result, /\n__HP_HTTP_STATUS__:(\d{3})\s*$/);
+	if (!status) {
+		log('Subscription request failed before receiving an HTTP response (network, TLS or curl error).');
+		return null;
+	}
+	if (status[1] !== '200') {
+		log(sprintf('Subscription HTTP status %s (redirects and HTTP errors are not followed).', status[1]));
+		return null;
+	}
+	const body = replace(result, /\n__HP_HTTP_STATUS__:\d{3}\s*$/, '');
+	if (!length(body)) {
+		log('Subscription HTTP 200 but response body is empty.');
+		return null;
+	}
+	log(sprintf('Subscription HTTP 200, received %s bytes.', length(body)));
+	return body;
 }
 
 function parse_singbox_outbound(ob, companion_map) {
