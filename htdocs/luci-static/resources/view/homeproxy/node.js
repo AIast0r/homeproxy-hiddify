@@ -2189,6 +2189,32 @@ return view.extend({
 		o = s.taboption('subscription', form.Value, 'user_agent', _('User-Agent'));
 		o.placeholder = 'Wget/1.21 (HomeProxy, like v2rayN)';
 
+		o = s.taboption('subscription', form.Flag, 'send_hwid', _('Send HWID'),
+			_('Send a persistent anonymous device identifier and optional device headers when fetching subscriptions. Only HTTPS URLs are accepted. Redirects are not followed.'));
+		o.default = '0';
+		o.rmempty = false;
+
+		o = s.taboption('subscription', form.Value, 'hwid', _('Subscription HWID'),
+			_('Optional. Leave empty to generate and save a random permanent ID on the first update. Reuse an existing app HWID if the provider limits device slots.'));
+		o.placeholder = _('Automatic (random persistent ID)');
+		o.depends('send_hwid', '1');
+		o.validate = function(section_id, value) {
+			return !value || (/^[A-Za-z0-9_.:-]{8,128}$/.test(value)) || _('Use 8–128 letters, digits or . _ : -');
+		};
+
+		o = s.taboption('subscription', form.Value, 'device_os', _('Device OS header'));
+		o.placeholder = 'OpenWrt';
+		o.depends('send_hwid', '1');
+
+		o = s.taboption('subscription', form.Value, 'device_os_version', _('Device OS version header'));
+		o.placeholder = '25.12.5';
+		o.depends('send_hwid', '1');
+
+		o = s.taboption('subscription', form.Value, 'device_model', _('Device model header'));
+		o.placeholder = 'CMCC RAX3000Me';
+		o.depends('send_hwid', '1');
+
+
 		o = s.taboption('subscription', form.Flag, 'allow_insecure', _('Allow insecure'),
 			_('Allow insecure connection by default when add nodes from subscriptions.') +
 			'<br/>' +
