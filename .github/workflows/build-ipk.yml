@@ -99,8 +99,18 @@ jobs:
           cmake -S /tmp/ucode-source -B /tmp/ucode-build \
             -DUBUS_SUPPORT=OFF -DUCI_SUPPORT=OFF -DULOOP_SUPPORT=OFF
           cmake --build /tmp/ucode-build --parallel 2
+          # Module imports require a full OpenWrt runtime. Strip only the
+          # import declarations for a parser/bytecode smoke test.
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          src = Path('root/etc/homeproxy/scripts/update_subscriptions.uc').read_text()
+          stripped, count = re.subn(r'(?m)^import\\s+[\\s\\S]*?;\\n', '', src)
+          assert count == 7, f'Expected seven module imports, got {count}'
+          Path('/tmp/homeproxy-subscription-syntax.uc').write_text(stripped)
+          PY
           /tmp/ucode-build/ucode -c -o /tmp/homeproxy-subscription.ucb \
-            root/etc/homeproxy/scripts/update_subscriptions.uc
+            /tmp/homeproxy-subscription-syntax.uc
 
       - name: Generate release tag
         id: tag
