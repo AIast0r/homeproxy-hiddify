@@ -132,6 +132,20 @@ jobs:
           mv luci-*-legacy.ipk legacy/
           popd
 
+      - name: Publish direct-download HWID test APKs
+        if: github.event_name == 'pull_request' && github.head_ref == 'feature/subscription-hwid' && github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "hwid-test-${{ github.run_number }}" \
+            ".github/${APK_ASSET_NAME}" \
+            ".github/${I18N_APK_ASSET_NAME}" \
+            --repo "${{ github.repository }}" \
+            --target "${{ github.event.pull_request.head.sha }}" \
+            --title "HWID test build ${{ github.run_number }}" \
+            --notes "Test build with NetShift client identity generator. Not yet runtime-tested on OpenWrt." \
+            --prerelease
+
       - name: Publishing APK files to GitHub Artifacts
         uses: actions/upload-artifact@v7
         if: github.event_name != 'release'
