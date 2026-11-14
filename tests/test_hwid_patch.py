@@ -50,6 +50,13 @@ class SubscriptionHWIDTests(unittest.TestCase):
         self.assertIn("hpChars(HP_HEX, 16)", VIEW)
         self.assertIn("hpChars(HP_HEX, 32).toUpperCase()", VIEW)
 
+    def test_subscription_http_status_logging(self):
+        self.assertIn("--write-out", SCRIPT)
+        self.assertIn("__HP_HTTP_STATUS__", SCRIPT)
+        self.assertIn("Subscription HTTP status %s", SCRIPT)
+        self.assertIn("Subscription HTTP 200, received %s bytes.", SCRIPT)
+        self.assertIn("Subscription HTTP 200 but response body is empty.", SCRIPT)
+
     def test_ui_and_package_dependencies(self):
         for option in ("send_hwid", "hwid", "device_os", "device_os_version", "device_model"):
             self.assertIn("'" + option + "'", VIEW)
