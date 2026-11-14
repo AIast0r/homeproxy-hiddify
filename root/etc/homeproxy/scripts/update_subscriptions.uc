@@ -8,7 +8,7 @@
 'use strict';
 
 import { md5 } from 'digest';
-import { open } from 'fs';
+import { open, popen, readfile } from 'fs';
 import { connect } from 'ubus';
 import { cursor } from 'uci';
 
@@ -36,7 +36,11 @@ const allow_insecure = uci.get(uciconfig, ucisubscription, 'allow_insecure') || 
       packet_encoding = uci.get(uciconfig, ucisubscription, 'packet_encoding') || 'xudp',
       subscription_urls = uci.get(uciconfig, ucisubscription, 'subscription_url') || [],
       user_agent = uci.get(uciconfig, ucisubscription, 'user_agent'),
-      via_proxy = uci.get(uciconfig, ucisubscription, 'update_via_proxy') || '0';
+      via_proxy = uci.get(uciconfig, ucisubscription, 'update_via_proxy') || '0',
+      send_hwid = uci.get(uciconfig, ucisubscription, 'send_hwid') === '1',
+      device_os = uci.get(uciconfig, ucisubscription, 'device_os') || 'OpenWrt',
+      device_os_version = uci.get(uciconfig, ucisubscription, 'device_os_version') || '',
+      device_model = uci.get(uciconfig, ucisubscription, 'device_model') || '';
 
 const routing_mode = uci.get(uciconfig, ucimain, 'routing_mode') || 'bypass_mainalnd_china';
 let main_node, main_udp_node;
@@ -78,6 +82,95 @@ function log(...args) {
 	const logfile = open(`${RUN_DIR}/homeproxy.log`, 'a');
 	logfile.write(`${getTime()} [SUBSCRIBE] ${join(' ', args)}\n`);
 	logfile.close();
+}
+
+/* Subscription identity headers are independent of the proxy core.
+ * Use a random persisted identifier rather than deriving a fingerprint from
+ * MAC, serial, host keys or other stable hardware secrets. */
+function shellquote(value) {
+	return "'" + replace(value, /'/g, "'\\''") + "'";
+}
+
+function valid_header_value(value) {
+	return type(value) === 'string' && length(value) <= 200 &&
+	       !match(value, /[\r\n]/);
+}
+
+function subscription_hwid() {
+	if (!send_hwid) return null;
+
+	let id = uci.get(uciconfig, ucisubscription, 'hwid') || '';
+	if (id && !valid_header_value(id)) {
+		log('Invalid configured HWID: skipping subscription request.');
+		return null;
+	}
+	if (id) return id;
+
+	const raw = trim(readfile('/proc/sys/kernel/random/uuid') || '');
+	if (!match(raw, /^[0-9a-fA-F-]{36}$/)) {
+		log('Unable to generate a stable subscription HWID.');
+		return null;
+	}
+	id = md5(raw);
+	uci.set(uciconfig, ucisubscription, 'hwid', id);
+	uci.commit(uciconfig);
+	log('Generated and persisted a new subscription HWID.');
+	return id;
+}
+
+const subscription_id = subscription_hwid();
+
+/* curl never follows redirects here. Forwarding device identifiers to arbitrary
+ * Location targets (including cross-origin URLs) could leak the HWID.
+ * Legacy subscriptions still use the unchanged upstream wGET(). */
+function fetch_subscription(url, agent) {
+	if (!send_hwid) return wGET(url, agent);
+	if (!subscription_id) return null;
+	if (!match(url, /^https:\/\//i)) {
+		log('HWID subscription must use HTTPS; refusing insecure URL.');
+		return null;
+	}
+
+	const headers = { 'X-HWID': subscription_id };
+	if (device_os) headers['X-Device-OS'] = device_os;
+	if (device_os_version) headers['X-Ver-OS'] = device_os_version;
+	if (device_model) headers['X-Device-Model'] = device_model;
+
+	let args = "curl --fail --silent --show-error --connect-timeout 10 --max-time 45 --max-redirs 0 --write-out " +
+		shellquote('\\n__HP_HTTP_STATUS__:%{http_code}');
+	for (let k in headers) {
+		if (!valid_header_value(headers[k])) {
+			log('Invalid subscription device header; refusing request.');
+			return null;
+		}
+		args += ' --header ' + shellquote(k + ': ' + headers[k]);
+	}
+	const ua = agent || 'HiddifyNext/2.0.0';
+	if (!valid_header_value(ua)) {
+		log('Invalid subscription User-Agent; refusing request.');
+		return null;
+	}
+	args += ' --user-agent ' + shellquote(ua) + ' -- ' + shellquote(url);
+	const fd = popen(args + ' 2>/dev/null');
+	if (!fd) return null;
+	const result = fd.read('all') || '';
+	fd.close();
+	const status = match(result, /\n__HP_HTTP_STATUS__:(\d{3})\s*$/);
+	if (!status) {
+		log('Subscription request failed before receiving an HTTP response (network, TLS or curl error).');
+		return null;
+	}
+	if (status[1] !== '200') {
+		log(sprintf('Subscription HTTP status %s (redirects and HTTP errors are not followed).', status[1]));
+		return null;
+	}
+	const body = replace(result, /\n__HP_HTTP_STATUS__:\d{3}\s*$/, '');
+	if (!length(body)) {
+		log('Subscription HTTP 200 but response body is empty.');
+		return null;
+	}
+	log(sprintf('Subscription HTTP 200, received %s bytes.', length(body)));
+	return body;
 }
 
 function parse_singbox_outbound(ob, companion_map) {
@@ -1081,7 +1174,7 @@ function main() {
 		node_cache[groupHash] = {};
 
 		/* Try Hiddify JSON format first: User-Agent triggers sing-box JSON on Hiddify Manager servers */
-		let res = wGET(url, 'HiddifyNext/2.0.0');
+		let res = fetch_subscription(url, send_hwid ? (user_agent || 'HiddifyNext/2.0.0') : 'HiddifyNext/2.0.0');
 		let nodes;
 
 		if (!isEmpty(res) && match(trim(res), /^\s*\{/)) {
@@ -1119,7 +1212,7 @@ function main() {
 
 		if (isEmpty(nodes)) {
 			/* Fallback: fetch with configured user_agent */
-			res = wGET(url, user_agent);
+			res = fetch_subscription(url, user_agent);
 
 			/* Empty or HTML response: server may require /raw suffix (e.g. HAPP-style
 			 * subscription servers that serve a web page by default). */
@@ -1127,7 +1220,7 @@ function main() {
 				const rawUrl = replace(url, /\/*$/, '') + '/raw';
 				log(sprintf('%s from %s, retrying with /raw.',
 					isEmpty(res) ? 'Empty response' : 'HTML response', url));
-				const rawRes = wGET(rawUrl, user_agent);
+				const rawRes = fetch_subscription(rawUrl, user_agent);
 				if (!isEmpty(rawRes) && !match(rawRes, /^\s*</))
 					res = rawRes;
 			}

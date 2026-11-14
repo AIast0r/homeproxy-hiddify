@@ -24,7 +24,7 @@ PKG_NAME="$(get_mk_value "PKG_NAME")"
 if [ "$RELEASE_TYPE" == "release" ]; then
 	PKG_VERSION="$(get_mk_value "PKG_VERSION")"
 else
-	PKG_VERSION="$(date -u +%Y.%m.%d)-r$(git rev-list --count HEAD)"
+	PKG_VERSION="$(date -u +%Y.%m.%d).${GITHUB_RUN_NUMBER:-0}-r1"
 fi
 
 TEMP_DIR="$(mktemp -d -p $BASE_DIR)"
@@ -106,7 +106,7 @@ default_prerm' > "$TEMP_DIR/pre-deinstall"
 		--script "post-install:$TEMP_DIR/post-install" \
 		--script "post-upgrade:$TEMP_DIR/post-upgrade" \
 		--script "pre-deinstall:$TEMP_DIR/pre-deinstall" \
-		--info "depends:libc firewall4 ucode-mod-digest" \
+		--info "depends:libc firewall4 ucode-mod-digest curl" \
 		--info "provides:luci-app-homeproxy" \
 		--info "provides:luci-app-homeproxy-hiddify" \
 		--info "replaces:luci-app-homeproxy" \
@@ -149,9 +149,9 @@ with open(path, 'w') as f:
 PYEOF
 		python3 /tmp/hp_legacy_patch.py "$SUBSC_UC"
 		rm -f /tmp/hp_legacy_patch.py
-		IPK_DEPS="libc, firewall4, kmod-nft-tproxy"
+		IPK_DEPS="libc, firewall4, kmod-nft-tproxy, curl"
 	else
-		IPK_DEPS="libc, firewall4, kmod-nft-tproxy, ucode-mod-digest"
+		IPK_DEPS="libc, firewall4, kmod-nft-tproxy, ucode-mod-digest, curl"
 	fi
 
 	# Rename handling (ipk): do NOT Provides the old names. opkg treats an installed
