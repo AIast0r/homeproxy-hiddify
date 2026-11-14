@@ -15,6 +15,215 @@
 'require homeproxy as hp';
 'require tools.widgets as widgets';
 
+
+/* Client profile data ported from yandexru45/netshift (GPL-2.0-or-later),
+ * fe-app-netshift/src/helpers/clientIdentity.ts. Preserve its full weighted
+ * variant table and model lists. Profiles are generated in the browser only. */
+const HP_HEX = '0123456789abcdef';
+function hpChars(alphabet, length) {
+	let out = '';
+	for (let i = 0; i < length; i++)
+		out += alphabet[Math.floor(Math.random() * alphabet.length)];
+	return out;
+}
+function hpPick(items) { return items[Math.floor(Math.random() * items.length)]; }
+function hpPickWeighted(items) {
+	const total = items.reduce((sum, v) => sum + v[2], 0);
+	let left = Math.random() * total;
+	for (const item of items) {
+		left -= item[2];
+		if (left < 0) return item;
+	}
+	return items[items.length - 1];
+}
+function hpUuid() {
+	const hex = hpChars(HP_HEX, 32);
+	return [hex.slice(0, 8), hex.slice(8, 12), '4' + hex.slice(13, 16),
+		'89ab'[Math.floor(Math.random() * 4)] + hex.slice(17, 20), hex.slice(20, 32)].join('-');
+}
+function hpFill(template) {
+	return template.replace('{install}', () => hpChars('123456789', 1) + hpChars('0123456789', 19))
+		.replace('{host}', () => hpChars('0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ', 7));
+}
+const hpHappHwid = () => hpChars(HP_HEX, 16);
+const hpAppleHwid = () => hpChars('0123456789abcdefghijklmnopqrstuvwxyz', 16);
+const hpIncyHwid = () => hpChars(HP_HEX, 32).toUpperCase()
+	.replace(/^(.{8})(.{4})(.{4})(.{4})(.{12})$/, '$1-$2-$3-$4-$5');
+
+const ANDROID_MODELS = [
+  'CPH2747',
+  'SM-A556E',
+  'SM-S721B',
+  'SM-S938B',
+  'SM-S918N',
+  '2112123AG',
+];
+const IPHONE_MODELS = [
+  'iPhone 15 Pro Max',
+  'iPhone 16 Pro Max',
+  'iPhone 17 Pro',
+  'iPhone 13',
+  'iPhone 16',
+  'iPhone 15 Pro',
+];
+
+const HP_CLIENT_PROFILES = {
+  Happ: {
+    Android: {
+      hwid: hpHappHwid,
+      deviceOs: 'Android',
+      variants: [
+        ['Happ/4.7.1/Android/{install}', '16', 36],
+        ['Happ/4.7.1/Android/{install}', '14', 11],
+        ['Happ/4.7.1/Android/{install}', '13', 6],
+        ['Happ/4.7.1/Android/{install}', '15', 6],
+        ['Happ/4.7.1/Android/{install}', '17', 5],
+        ['Happ/4.6.0/Android/{install}', '16', 3],
+        ['Happ/4.4.1/Android/{install}', '13', 3],
+        ['Happ/4.4.1/Android/{install}', '16', 3],
+        ['Happ/4.7.1/Android/{install}', '12', 2],
+        ['Happ/4.6.1/Android/{install}', '11', 2],
+        ['Happ/4.8.0/Android/{install}', '16', 2],
+      ],
+      models: ANDROID_MODELS,
+    },
+    AndroidTV: {
+      hwid: hpHappHwid,
+      deviceOs: 'AndroidTV',
+      variants: [
+        ['Happ/4.7.1/AndroidTV/{install}', '14', 5],
+        ['Happ/4.7.1/AndroidTV/{install}', '12', 2],
+      ],
+      models: ['MiTV-MOOQ1', 'MiTV-AFKR0', 'VONTAR H618', '4K PA Google TV'],
+    },
+    iOS: {
+      hwid: hpAppleHwid,
+      deviceOs: 'iOS',
+      variants: [
+        ['Happ/4.12.0/ios/2606121423635', '26.6.1', 10],
+        ['Happ/4.12.0/ios/2606121423635', '26.6.2', 5],
+        ['Happ/4.12.0/ios/2606121423635', '27.0.1', 4],
+        ['Happ/4.11.0/ios/2606031854651', '26.6.1', 3],
+        ['Happ/4.12.0/ios/2606121423635', '26.3.1', 2],
+        ['Happ/4.13.0/ios/2606221801679', '26.7.1', 2],
+        ['Happ/4.13.0/ios/2606242343607', '26.6.2', 2],
+        ['Happ/4.13.0/ios/2606221809551', '26.5.2', 2],
+        ['Happ/5.7.0/ios/2609021014649', '26.6.2', 2],
+        ['Happ/6.1.0/ios/2610091516618', '27.0.1', 2],
+        ['Happ/4.12.0/ios/2606121423635', '18.6.2', 2],
+      ],
+      models: IPHONE_MODELS,
+    },
+    macOS: {
+      hwid: hpAppleHwid,
+      deviceOs: 'macOS',
+      variants: [
+        ['Happ/4.11.0/macos catalyst/2606031851521', '26.0.1', 2],
+        ['Happ/4.7.4/macos catalyst/2604141223521', '15.7.9', 2],
+        ['Happ/6.1.0/macos catalyst/2610091518671', '15.3.1', 1],
+        ['Happ/6.0.0/macos catalyst/2609301458638', '27.0.1', 1],
+        ['Happ/4.13.0/macos catalyst/2606241216557', '27.0.1', 1],
+        ['Happ/4.7.4/macos catalyst/2604141223521', '26.6.2', 1],
+      ],
+      models: ['Mac', 'MacBook', 'iMac'],
+    },
+    Windows: {
+      hwid: hpUuid,
+      deviceOs: 'Windows',
+      variants: [
+        ['Happ/4.5.4/Windows/2610141139602', '10_10.0.19045', 3],
+        ['Happ/4.3.0/Windows/2609151455603', '10_10.0.19045', 3],
+        ['Happ/4.2.1/Windows/2609041405606', '11_10.0.26200', 2],
+        ['Happ/4.3.0/Windows/2609151455503', '11_10.0.26200', 2],
+        ['Happ/4.3.0/Windows/2609151455603', '11_10.0.26100', 2],
+      ],
+      models: ['DESKTOP-{host}_x86_64'],
+    },
+  },
+  INCY: {
+    Android: {
+      hwid: hpIncyHwid,
+      deviceOs: 'Android',
+      variants: [
+        ['INCY/3.7.9/android Dalvik/2.1.0', '16', 22],
+        ['INCY/3.7.9/android Dalvik/2.1.0', '15', 7],
+        ['INCY/3.7.9/android Dalvik/2.1.0', '14', 6],
+        ['INCY/3.7.9/android Dalvik/2.1.0', '17', 5],
+        ['INCY/3.7.9/android Dalvik/2.1.0', '13', 5],
+        ['INCY/3.7.0/android Dalvik/2.1.0', '13', 4],
+        ['INCY/3.7.0/android Dalvik/2.1.0', '16', 4],
+      ],
+      models: [
+        'samsung SM-S938B',
+        'samsung SM-A546E',
+        'samsung SM-A556E',
+        'Xiaomi 24116RACCG',
+        'Xiaomi 2311DRK48G',
+      ],
+    },
+    iOS: {
+      hwid: hpIncyHwid,
+      deviceOs: 'iOS',
+      variants: [
+        ['INCY/2.6.4/ios CFNetwork/3896.100.1.2.1 Darwin/27.0.0', '27.0.1', 13],
+        ['INCY/2.6.4/ios CFNetwork/3860.700.2 Darwin/25.6.0', '26.6.2', 6],
+        ['INCY/2.6.5/ios CFNetwork/3860.700.1 Darwin/25.6.0', '26.6.1', 4],
+        ['INCY/2.6.1/ios CFNetwork/3860.400.51 Darwin/25.3.0', '26.3.1', 4],
+        ['INCY/2.6.3/ios CFNetwork/3860.700.1 Darwin/25.6.0', '26.6.1', 4],
+        ['INCY/2.6.5/ios CFNetwork/3860.700.2 Darwin/25.6.0', '26.6.2', 4],
+        ['INCY/2.6.2/ios CFNetwork/3860.700.2 Darwin/25.6.0', '26.6.2', 3],
+        ['INCY/2.6.3/ios CFNetwork/3860.600.12 Darwin/25.5.0', '26.5', 3],
+        ['INCY/2.6.4/ios CFNetwork/3860.600.12 Darwin/25.5.0', '26.5', 3],
+        ['INCY/2.6.5/ios CFNetwork/3860.400.51 Darwin/25.3.0', '26.3.1', 2],
+        ['INCY/2.6.2/ios CFNetwork/3860.700.1 Darwin/25.6.0', '26.6.1', 2],
+        ['INCY/2.6.4/ios CFNetwork/3826.600.41.2.1 Darwin/24.6.0', '18.7.8', 2],
+      ],
+      models: IPHONE_MODELS,
+    },
+    'Mac OS X': {
+      hwid: hpIncyHwid,
+      deviceOs: 'Mac OS X',
+      variants: [
+        ['INCY/3.8.8/mac os x Dalvik/21.0.11+10-LTS', '26.6.2', 2],
+        ['INCY/3.7.2/mac os x Dalvik/21.0.11+10-LTS', '15.3.1', 1],
+      ],
+      models: ['Mac OS X aarch64'],
+    },
+    'Windows 11': {
+      hwid: hpIncyHwid,
+      deviceOs: 'Windows 11',
+      variants: [
+        ['INCY/3.9.0/windows 11 Dalvik/21.0.12+8-LTS', '10.0', 1],
+        ['INCY/3.8.6/windows 11 Dalvik/21.0.8+9-LTS', '10.0', 1],
+        ['INCY/3.5.0/windows 11 Dalvik/21.0.8+9-LTS', '10.0', 1],
+      ],
+      models: ['Windows 11 amd64'],
+    },
+    'Windows 10': {
+      hwid: hpIncyHwid,
+      deviceOs: 'Windows 10',
+      variants: [
+        ['INCY/3.8.8/windows 10 Dalvik/21.0.12+8-LTS', '10.0', 2],
+        ['INCY/3.8.10/windows 10 Dalvik/21.0.12+8-LTS', '10.0', 1],
+      ],
+      models: ['Windows 10 amd64'],
+    },
+  },
+};
+
+function hpGenerateClient(app, platform) {
+	const profile = HP_CLIENT_PROFILES[app] && HP_CLIENT_PROFILES[app][platform];
+	if (!profile) return null;
+	const variant = hpPickWeighted(profile.variants);
+	return {
+		user_agent: hpFill(variant[0]),
+		hwid: profile.hwid(),
+		device_os: profile.deviceOs,
+		device_os_version: variant[1],
+		device_model: hpFill(hpPick(profile.models))
+	};
+}
+
 function allowInsecureConfirm(ev, _section_id, value) {
 	if (value === '1' && !confirm(_('Are you sure to allow insecure?')))
 		ev.target.firstElementChild.checked = null;
@@ -2185,6 +2394,38 @@ return view.extend({
 			_('Drop/keep nodes that contain the specific keywords. <a target="_blank" href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_Expressions">Regex</a> is supported.'));
 		o.depends({'filter_nodes': 'disabled', '!reverse': true});
 		o.rmempty = false;
+
+		o = s.taboption('subscription', form.ListValue, '_client_app', _('Generate client: app'));
+		o.value('Happ', 'Happ');
+		o.value('INCY', 'INCY');
+		o.default = 'Happ';
+		o.depends('send_hwid', '1');
+
+		o = s.taboption('subscription', form.ListValue, '_client_platform', _('Generate client: platform'));
+		for (const platform of ['Android', 'AndroidTV', 'iOS', 'macOS', 'Windows', 'Mac OS X', 'Windows 11', 'Windows 10'])
+			o.value(platform, platform);
+		o.default = 'Android';
+		o.depends('send_hwid', '1');
+
+		o = s.taboption('subscription', form.Button, '_generate_client', _('Generate Android / app client'));
+		o.inputstyle = 'apply';
+		o.inputtitle = _('Generate client identity');
+		o.depends('send_hwid', '1');
+		o.onclick = function(section_id) {
+			const app = this.map.lookupOption('_client_app', section_id)[0].formvalue(section_id) || 'Happ';
+			const platform = this.map.lookupOption('_client_platform', section_id)[0].formvalue(section_id) || 'Android';
+			const identity = hpGenerateClient(app, platform);
+			if (!identity) {
+				ui.addNotification(null, E('p', _('This app / platform combination is not supported.')));
+				return;
+			}
+			for (const key of ['user_agent', 'hwid', 'device_os', 'device_os_version', 'device_model']) {
+				const field = this.map.lookupOption(key, section_id)[0];
+				const widget = field && field.getUIElement(section_id);
+				if (widget) widget.setValue(identity[key]);
+			}
+			ui.addNotification(null, E('p', _('New client generated. Save and apply to keep this identity.')));
+		};
 
 		o = s.taboption('subscription', form.Value, 'user_agent', _('User-Agent'));
 		o.placeholder = 'Wget/1.21 (HomeProxy, like v2rayN)';
